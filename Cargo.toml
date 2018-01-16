@@ -1,0 +1,17 @@
+[package]
+name = "merkle_hash_tree"
+version = "0.1.0"
+authors = ["sergorl <serg.neworl@gmail.com>"]
+
+[lib]
+name = "merkle_tree"
+path = "src/lib.rs"
+
+[dependencies]
+rust-crypto = "^0.2"
+rand = "0.4"
+crossbeam = "0.3.0"
+num_cpus = "0.2"
+
+[feature]
+unstable = []
