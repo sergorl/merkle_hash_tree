@@ -12,13 +12,13 @@ fn main() {
  	let tree = MerkleTree::new(&data, num_cpus::get());
 
 	println!("{}", tree);
-	// println!("{}", to_hex_string(tree.get_root()));	
+	println!("{}", to_hex_string(tree.get_root()));	
 
-	// println!("{}", to_hex_string(tree.get_parent(0, 3).unwrap()));
-	// println!("{}", to_hex_string(tree.get_parent(0, 2).unwrap()));	
-	// println!("{}", to_hex_string(tree.get_parent(0, 7).unwrap()));	
-	// println!("{}", to_hex_string(tree.get_parent(2, 0).unwrap()));
-	// println!("{}", to_hex_string(tree.get_parent(2, 1).unwrap()));
+	println!("{}", to_hex_string(tree.get_parent(0, 3).unwrap()));
+	println!("{}", to_hex_string(tree.get_parent(0, 2).unwrap()));	
+	println!("{}", to_hex_string(tree.get_parent(0, 7).unwrap()));	
+	println!("{}", to_hex_string(tree.get_parent(2, 0).unwrap()));
+	println!("{}", to_hex_string(tree.get_parent(2, 1).unwrap()));
 
 	let (child1, child2) = tree.get_children(2, 1).unwrap();
 	println!("{}", to_hex_string(child1));

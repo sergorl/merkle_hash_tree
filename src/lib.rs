@@ -1,3 +1,21 @@
+/// Merkle hash tree
+/// 
+/// # Examples
+///
+/// ```
+/// use merkle_tree::MerkleTree;
+/// use merkle_tree::to_hex_string;
+/// use merkle_tree::gen_data;
+///
+/// let data = gen_data(8);
+///
+/// let tree = MerkleTree::new(&data, num_cpus::get());
+///
+/// println!("{}", tree);
+/// println!("{}", to_hex_string(tree.get_root()));
+///
+/// ```
+
 extern crate crossbeam;
 extern crate crypto;
 extern crate rand;
@@ -187,11 +205,9 @@ fn copy_last_data(data: &mut Vec<u8>, num_block: usize) {
 
 /// Create new level of hash tree
 fn create_and_fill_level(hash_tree: &mut Vec<Vec<u8>>, num_cpus: usize) {
-    let size_prev_level: usize;
-    {
-        size_prev_level = hash_tree.last().unwrap().len();
-    }
 
+    let size_prev_level: usize = hash_tree.last().unwrap().len();
+    
     let num_block_in_prev_level = size_prev_level / SIZE_BLOCK_HASH;
     let addition = (num_block_in_prev_level / 2) % 2;
     let num_block_in_new_level: usize;
