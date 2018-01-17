@@ -14,17 +14,17 @@ fn main() {
 	println!("{}", tree);
 	println!("{}", to_hex_string(tree.get_root()));	
 
-	println!("{}", to_hex_string(tree.get_parent(0, 3).unwrap()));
-	println!("{}", to_hex_string(tree.get_parent(0, 2).unwrap()));	
-	println!("{}", to_hex_string(tree.get_parent(0, 7).unwrap()));	
-	println!("{}", to_hex_string(tree.get_parent(2, 0).unwrap()));
-	println!("{}", to_hex_string(tree.get_parent(2, 1).unwrap()));
+	println!("{}", to_hex_string(tree.get_parent(0, 3)));
+	println!("{}", to_hex_string(tree.get_parent(0, 2)));	
+	println!("{}", to_hex_string(tree.get_parent(0, 7)));	
+	println!("{}", to_hex_string(tree.get_parent(2, 0)));
+	println!("{}", to_hex_string(tree.get_parent(3, 1)));
 
-	let (child1, child2) = tree.get_children(2, 1).unwrap();
+	let (child1, child2) = tree.get_children(2, 1);
 	println!("{}", to_hex_string(child1));
 	println!("{}", to_hex_string(child2));
 
-	let (child1, child2) = tree.get_children(3, 0).unwrap();
+	let (child1, child2) = tree.get_children(3, 0);
 	println!("{}", to_hex_string(child1));
 	println!("{}", to_hex_string(child2));
 

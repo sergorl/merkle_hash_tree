@@ -53,55 +53,55 @@ impl MerkleTree {
         self.tree.len()
     }
 
-    pub fn get_level(&self, index: usize) -> Option<&[u8]> {
+    pub fn get_level(&self, index: usize) -> &[u8] {
         if index > self.tree.len() - 1 {
-            None
+            panic!("Invalid index!");
         } else {
-            Some(&self.tree[index])
+            &self.tree[index]
         }
     }
 
-    pub fn get_hash(&self, level: usize, index: usize) -> Option<&[u8]> {
+    pub fn get_hash(&self, level: usize, index: usize) -> &[u8] {
         if level > self.tree.len() - 1 {
-            None
+            panic!("Invalid level!");
         } else {
             let num_block = self.tree[level].len() / SIZE_BLOCK_HASH;
             if index > num_block {
-                None
+                panic!("Invalid index!");
             } else {
-                Some(&self.tree[level][index * SIZE_BLOCK_HASH..(index + 1) * SIZE_BLOCK_HASH])
+                &self.tree[level][index * SIZE_BLOCK_HASH..(index + 1) * SIZE_BLOCK_HASH]
             }
         }
     }
 
-    pub fn get_parent(&self, level: usize, index: usize) -> Option<&[u8]> {
+    pub fn get_parent(&self, level: usize, index: usize) -> &[u8] {
         if level + 1 > self.tree.len() - 1 {
-            None
+            panic!("Invalid level!");
         } else {
             let num_block = self.tree[level + 1].len() / SIZE_BLOCK_HASH;
             let i = ((index as f64) / 2.0).floor() as usize;
             if i > num_block - 1 {
-                None
+                panic!("Invalid index!");
             } else {
-                Some(&self.tree[level + 1][i * SIZE_BLOCK_HASH..(i + 1) * SIZE_BLOCK_HASH])
+                &self.tree[level + 1][i * SIZE_BLOCK_HASH..(i + 1) * SIZE_BLOCK_HASH]
             }
         }
     }
 
-    pub fn get_children(&self, level: usize, index: usize) -> Option<(&[u8], &[u8])> {
+    pub fn get_children(&self, level: usize, index: usize) -> (&[u8], &[u8]) {
         let levels = self.tree.len() - 1;
         if level > levels || level == 0 || levels == 0 {
-            None
+            panic!("Invalid level!");
         } else {
             let num_block = self.tree[level - 1].len() / SIZE_BLOCK_HASH;
             let i = 2 * index;
             if i > num_block {
-                None
+                panic!("Invalid index!");
             } else {
-                Some((
+                (
                     &self.tree[level - 1][i * SIZE_BLOCK_HASH..(i + 1) * SIZE_BLOCK_HASH],
                     &self.tree[level - 1][(i + 1) * SIZE_BLOCK_HASH..(i + 2) * SIZE_BLOCK_HASH],
-                ))
+                )
             }
         }
     }
@@ -111,16 +111,19 @@ impl MerkleTree {
 impl fmt::Display for MerkleTree {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut level: usize = 0;
+        let mut index: usize = 0;
 
         write!(f, "{}\n", "Tree: ");     
 
         for hash_level in &self.tree {
             write!(f, "Level {}: \n", level);                
             for hash in hash_level.chunks(SIZE_BLOCK_HASH) {
-                write!(f, "{}\n", to_hex_string(hash));                
+                write!(f, "hash {}: {}\n", index, to_hex_string(hash)); 
+                index += 1;           
             }  
+            index = 0;
             level += 1; 
-            write!(f, "{}\n", "-------------------------------------------------------------------------------------");          
+            write!(f, "{}\n", "------------------------------------------------------------------------");          
         }
 
         write!(f, "{}", "End.")
