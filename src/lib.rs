@@ -1,20 +1,4 @@
 /// Merkle hash tree
-/// 
-/// # Examples
-///
-/// ```
-/// use merkle_tree::MerkleTree;
-/// use merkle_tree::to_hex_string;
-/// use merkle_tree::gen_data;
-///
-/// let data = gen_data(8);
-///
-/// let tree = MerkleTree::new(&data, num_cpus::get());
-///
-/// println!("{}", tree);
-/// println!("{}", to_hex_string(tree.get_root()));
-///
-/// ```
 
 extern crate crossbeam;
 extern crate crypto;

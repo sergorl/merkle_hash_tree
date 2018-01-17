@@ -1,7 +1,7 @@
-#![cfg_attr(feature = "unstable", feature(test))]
+#![feature(test)]
 
 
-#[cfg(all(feature = "unstable", test))]
+#[cfg(test)]
 mod tests {
 
     extern crate test;
@@ -12,6 +12,11 @@ mod tests {
     use test::Bencher;
     use merkle_tree::MerkleTree;
     use merkle_tree::gen_data;
+
+    #[test]
+    fn fun_test() {
+    	(0..1000).fold(0, |old, new| old ^ new);
+    }
 
     #[test]
     fn test_sha256() {
@@ -41,20 +46,6 @@ mod tests {
         println!("Hash: {:?}", sha.result_str());
     }
 
-    
-    #[bench]
-    fn bench_one_core(b: &mut Bencher) {
-        b.iter(|| {            
-            MerkleTree::new(&gen_data(1024), 1)     
-        });
-    }
-
-    #[bench]
-    fn bench_few_core(b: &mut Bencher) {
-        b.iter(|| {            
-            MerkleTree::new(&gen_data(1024), 8)     
-        });
-    }
 }
 
 
