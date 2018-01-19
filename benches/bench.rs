@@ -12,25 +12,20 @@ use merkle_tree::gen_data;
 
 #[bench]
 fn bench_one_core(b: &mut Bencher) {
-    b.iter(|| {            
-        MerkleTree::new(&gen_data(512), 1)     
+    b.iter(|| {   
+    	let data = gen_data(512);           
+        MerkleTree::new(&data, 1)     
     });
 }
 
 #[bench]
 fn bench_few_core(b: &mut Bencher) {
-    b.iter(|| {            
-        MerkleTree::new(&gen_data(512), 16)     
+    b.iter(|| {         
+    	let data = gen_data(512);   
+        MerkleTree::new(&data, num_cpus::get())     
     });
 }
 
-// #[bench]
-// fn bench_xor_1000_ints(b: &mut Bencher) {
-//     b.iter(|| {
-//         let n = test::black_box(100);
-//         (0..n).fold(0, |a, b| a ^ b)
-//     });
-// }
 
 
 

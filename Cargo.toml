@@ -12,4 +12,5 @@ rust-crypto = "^0.2"
 rand = "0.4"
 crossbeam = "0.3.0"
 num_cpus = "0.2"
+rayon = "0.9"
 
