@@ -1,9 +1,9 @@
 #![feature(test)]
 
-extern crate test;
-extern crate rand;
 extern crate merkle_tree;
 extern crate num_cpus;
+extern crate rand;
+extern crate test;
 
 use rand::Rng;
 use test::Bencher;
@@ -12,20 +12,12 @@ use merkle_tree::gen_data;
 
 #[bench]
 fn bench_one_core(b: &mut Bencher) {
-    b.iter(|| {   
-    	let data = gen_data(32*65536);           
-        MerkleTree::new(&data, 1)     
-    });
+    let data = gen_data(8 * 65536);
+    b.iter(|| MerkleTree::new(&data, 1));
 }
 
 #[bench]
 fn bench_few_core(b: &mut Bencher) {
-    b.iter(|| {         
-    	let data = gen_data(32*65536);   
-        MerkleTree::new(&data, num_cpus::get())     
-    });
+    let data = gen_data(8 * 65536);
+    b.iter(|| MerkleTree::new(&data, num_cpus::get()));
 }
-
-
-
-

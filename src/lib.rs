@@ -1,18 +1,18 @@
-//! Merkle hash tree - binary tree which consists of two or more levels 
+//! Merkle hash tree - binary tree which consists of two or more levels
 //! Each tree level is a vector of bytes which is a result of applying hash function to previous level
 //! Tree level indexing starts with zero: zero level is a result of applying hash function to input byte blocks
 //!                                       last (or max) level is a root of tree
 //! Zero level is formed of input byte blocks. If number of block is odd then last block is copy. It is also true for other tree levels (exception is root)
 //! Thus, the length of each tree level (exception is root) is always even
 //!
-//! The used hash function is sha256(...) for zero level and hash_hash = sha256(sha256(...)) for other levels. 
-//! The length of sha256 input should be not less than constant SIZE_BLOCK_HASH. It is necessraty for crate crypto
-//! The length of hash_hash input should be not less than constant SIZE_INPUT_HASH = 2 * SIZE_BLOCK_HASH. It is necessraty for Merkle tree
-//! 
+//! The used hash function is sha256(...) for zero level and hash_hash = sha256(sha256(...)) for other levels.
+//! The length of sha256 input should be not less than constant SIZE_BLOCK_HASH. It is necessary for crate crypto
+//! The length of hash_hash input should be not less than constant SIZE_INPUT_HASH = 2 * SIZE_BLOCK_HASH. It is necessary for Merkle tree
+//!
 //! Tree level is a vector of contiguous batch of hash bytes which size is SIZE_BLOCK_HASH
 //! Thus, each level contains (number of blocks * SIZE_BLOCK_HASH) hash bytes
-//! 
-//!  
+//!
+//!
 //! # Example
 //! ```rust,ignore
 //!
@@ -21,7 +21,6 @@
 //! ```
 //!
 
-extern crate crossbeam;
 extern crate crypto;
 extern crate rand;
 extern crate rayon;
@@ -31,7 +30,7 @@ use crypto::sha2::Sha256;
 use std::vec::Vec;
 use rand::Rng;
 use std::fmt;
-use rayon::prelude::*;
+// use rayon::prelude::*;
 
 const SIZE_INPUT_HASH: usize = 64;
 const SIZE_BLOCK_HASH: usize = 32;
@@ -45,7 +44,7 @@ impl MerkleTree {
         let num_block = blocks.len();
 
         if num_block == 0 {
-            panic!("Length of blocks shoul be greater ZERO!");
+            panic!("Length of blocks should be greater ZERO!");
         } else {
             if blocks.iter().any(|block| block.len() < SIZE_BLOCK_HASH) {
                 panic!(
@@ -55,16 +54,20 @@ impl MerkleTree {
             }
         }
 
+        // Pool of thread for speed up calculations of hash in the current level of tree
+        let pool =
+            rayon::ThreadPool::new(rayon::Configuration::new().num_threads(num_cpus)).unwrap();
+
         let levels = ((num_block + num_block % 2) as f64).log2().ceil() as usize;
 
+        // Merkle tree - vector of tree levels, where each level is vector of hash bytes
         let mut hash_tree: Vec<Vec<u8>> = Vec::with_capacity(levels);
 
-        create_base_tree_par(blocks, &mut hash_tree, num_cpus);
-        // create_base_tree(blocks, &mut hash_tree, num_cpus);
+        // At first, create a zero level applying sha256(...) to each input block of bytes
+        create_hash_zero_level(blocks, &mut hash_tree, &pool, num_cpus);
 
         for _ in 0..levels {
-            create_and_fill_level_par(&mut hash_tree, num_cpus);
-            // create_and_fill_level(&mut hash_tree, num_cpus);
+            create_hash_level(&mut hash_tree, &pool, num_cpus);
         }
 
         MerkleTree { tree: hash_tree }
@@ -91,6 +94,7 @@ impl MerkleTree {
             panic!("Invalid level in get_hash()!");
         } else {
             let num_block = self.tree[level].len() / SIZE_BLOCK_HASH;
+
             if index > num_block - 1 {
                 panic!("Invalid index in get_hash()!");
             } else {
@@ -105,6 +109,7 @@ impl MerkleTree {
         } else {
             let num_block = self.tree[level + 1].len() / SIZE_BLOCK_HASH;
             let i = ((index as f64) / 2.0).floor() as usize;
+
             if i > num_block - 1 {
                 panic!("Invalid index in get_parent()!");
             } else {
@@ -119,8 +124,15 @@ impl MerkleTree {
             panic!("Invalid level in get_children()!");
         } else {
             let num_block = self.tree[level - 1].len() / SIZE_BLOCK_HASH;
-            let i = 2 * index;
-            if i > num_block {
+            let mut i = 2 * index;
+
+            // for blocks which don't have children because
+            // it was build by copy last block of previous level with odd number of blocks
+            if i == num_block {
+                i = num_block - 2;
+            }
+
+            if i > num_block - 1 {
                 panic!("Invalid index in get_children()!");
             } else {
                 (
@@ -142,10 +154,12 @@ impl fmt::Display for MerkleTree {
 
         for hash_level in &self.tree {
             write!(f, "Level {}: \n", level);
+
             for hash in hash_level.chunks(SIZE_BLOCK_HASH) {
                 write!(f, "hash {}: {}\n", index, to_hex_string(hash));
                 index += 1;
             }
+
             index = 0;
             level += 1;
             write!(
@@ -165,7 +179,7 @@ pub fn to_hex_string(bytes: &[u8]) -> String {
     strs
 }
 
-/// Hash = Sha256 for first stage of Hash function of Merkle Tree
+/// Hash = Sha256 for first stage of hash function
 fn hash_1(data: &[u8]) -> (Vec<u8>, Sha256) {
     let mut sha = Sha256::new();
 
@@ -189,14 +203,14 @@ fn hash_hash(data: &[u8], hashed: &mut [u8]) {
     sha.result(hashed);
 }
 
-/// Hash = Sha256 for base of hash tree
+/// Hash = Sha256 for zero hash level
 fn hash(data: &[u8], hashed: &mut [u8]) {
     let mut sha = Sha256::new();
     sha.input(data);
     sha.result(hashed);
 }
 
-/// Create vector of new level of hash tree
+/// Allocate vector with necessary capacity. It creates blueprint of new hash level
 fn create_level(size: usize) -> Vec<u8> {
     let mut new_level: Vec<u8> = Vec::with_capacity(size);
 
@@ -207,7 +221,8 @@ fn create_level(size: usize) -> Vec<u8> {
     new_level
 }
 
-/// Copy data from source to destination by pointers to previous level of hash tree
+/// Copy data from source to destination by pointers (of previous level of hash tree)
+/// It is used if previous level conatains odd number of byte block
 fn copy_last_data(data: &mut Vec<u8>, num_block: usize) {
     let src = data.as_ptr();
     let dst = data.as_mut_ptr();
@@ -219,118 +234,84 @@ fn copy_last_data(data: &mut Vec<u8>, num_block: usize) {
     }
 }
 
-/// Create new level of hash tree
-fn create_and_fill_level(hash_tree: &mut Vec<Vec<u8>>, num_cpus: usize) {
-    let size_prev_level: usize = hash_tree.last().unwrap().len();
-
-    let num_block_in_prev_level = size_prev_level / SIZE_BLOCK_HASH;
-    let addition = (num_block_in_prev_level / 2) % 2;
-    let num_block_in_new_level: usize;
-
-    if num_block_in_prev_level > 2 {
-        num_block_in_new_level = num_block_in_prev_level / 2 + addition;
-    } else {
-        num_block_in_new_level = 1;
-    }
-
-    let mut new_level = create_level(num_block_in_new_level * SIZE_BLOCK_HASH);
-
-    {
-        let prev_level = hash_tree.last().unwrap();
-
-        for blocks in prev_level.chunks(num_cpus * SIZE_INPUT_HASH) {
-            crossbeam::scope(|scope| {
-                for (input, result) in blocks
-                    .chunks(SIZE_INPUT_HASH)
-                    .zip(new_level.chunks_mut(SIZE_BLOCK_HASH))
-                {
-                    scope.spawn(move || hash_hash(input, result));
-                }
-            });
-        }
-
-        if addition == 1 && num_block_in_prev_level > 2 {
-            copy_last_data(&mut new_level, num_block_in_new_level);
-        }
-    }
-
-    hash_tree.push(new_level);
-}
-
-fn create_and_fill_level_par(hash_tree: &mut Vec<Vec<u8>>, num_cpus: usize) {
-    let size_prev_level: usize = hash_tree.last().unwrap().len();
-
-    let num_block_in_prev_level = size_prev_level / SIZE_BLOCK_HASH;
-    let addition = (num_block_in_prev_level / 2) % 2;
-    let num_block_in_new_level: usize;
-
-    if num_block_in_prev_level > 2 {
-        num_block_in_new_level = num_block_in_prev_level / 2 + addition;
-    } else {
-        num_block_in_new_level = 1;
-    }
-
-    let mut new_level = create_level(num_block_in_new_level * SIZE_BLOCK_HASH);
-
-    {
-        let prev_level = hash_tree.last().unwrap();
-
-        let pool =
-            rayon::ThreadPool::new(rayon::Configuration::new().num_threads(num_cpus)).unwrap();
-    
-        pool.scope(|scope| {
-            for (input, result) in prev_level.chunks(SIZE_INPUT_HASH).
-                                              zip(new_level.chunks_mut(SIZE_INPUT_HASH))
-            {
-                scope.spawn(move |_| hash_hash(input, result));
-            }
-        });    
-    }
-
-    if addition == 1 && num_block_in_prev_level > 2 {
-            copy_last_data(&mut new_level, num_block_in_new_level);
-    }
-
-    hash_tree.push(new_level);
-}
-
-
-/// Create base of hash tree and add this base to vector of hash levels in Merkle Tree
-fn create_base_tree(blocks: &Vec<Vec<u8>>, hash_tree: &mut Vec<Vec<u8>>, num_cpus: usize) {
-    let size = blocks.len();
-    let num_block = size + size % 2;
-
-    let mut base: Vec<u8> = create_level(num_block * SIZE_BLOCK_HASH);
-
-    for block in blocks.chunks(num_cpus) {
-        crossbeam::scope(|scope| {
-            for (input, result) in block.iter().zip(base.chunks_mut(SIZE_BLOCK_HASH)) {
-                scope.spawn(move || hash(input, result));
-            }
-        });
-    }
-
-    if size % 2 == 1 {
-        copy_last_data(&mut base, num_block);
-    }
-
-    hash_tree.push(base);
-}
-
-fn create_base_tree_par(blocks: &Vec<Vec<u8>>, hash_tree: &mut Vec<Vec<u8>>, num_cpus: usize) {
-    let size = blocks.len();
-    let num_block = size + size % 2;
-
-    let mut base: Vec<u8> = create_level(num_block * SIZE_BLOCK_HASH);
-
-    let pool = rayon::ThreadPool::new(rayon::Configuration::new().num_threads(num_cpus)).unwrap();
-
+/// Parallel hash
+fn par_hash_hash(prev_level: &Vec<u8>, new_level: &mut Vec<u8>, pool: &rayon::ThreadPool) {
     pool.scope(|scope| {
-        for (input, result) in blocks.iter().zip(base.chunks_mut(SIZE_INPUT_HASH))
+        for (input, result) in prev_level
+            .chunks(SIZE_INPUT_HASH)
+            .zip(new_level.chunks_mut(SIZE_INPUT_HASH))
         {
             scope.spawn(move |_| hash_hash(input, result));
         }
     });
+}
+
+/// Create new level and add it to vector of hash levels
+fn create_hash_level(hash_tree: &mut Vec<Vec<u8>>, pool: &rayon::ThreadPool, num_cpus: usize) {
+    let size_prev_level: usize = hash_tree.last().unwrap().len();
+
+    let num_block_in_prev_level = size_prev_level / SIZE_BLOCK_HASH;
+    let addition = (num_block_in_prev_level / 2) % 2;
+    let num_block_in_new_level: usize;
+
+    if num_block_in_prev_level > 2 {
+        num_block_in_new_level = num_block_in_prev_level / 2 + addition;
+    } else {
+        num_block_in_new_level = 1;
+    }
+
+    let mut new_level = create_level(num_block_in_new_level * SIZE_BLOCK_HASH);
+
+    {
+        let prev_level = hash_tree.last().unwrap();
+        let num_thread: usize;
+
+        if pool.current_num_threads() > num_block_in_new_level {
+            let pool = rayon::ThreadPool::new(
+                rayon::Configuration::new().num_threads(num_block_in_new_level),
+            ).unwrap();
+            par_hash_hash(&prev_level, &mut new_level, &pool);
+        } else {
+            par_hash_hash(&prev_level, &mut new_level, &pool);
+        }
+    }
+
+    if addition == 1 && num_block_in_prev_level > 2 {
+        copy_last_data(&mut new_level, num_block_in_new_level);
+    }
+
+    hash_tree.push(new_level);
+}
+
+/// Parallel hash
+fn par_zero_hash(blocks: &Vec<Vec<u8>>, base: &mut Vec<u8>, pool: &rayon::ThreadPool) {
+    pool.scope(|scope| {
+        for (input, result) in blocks.iter().zip(base.chunks_mut(SIZE_INPUT_HASH)) {
+            scope.spawn(move |_| hash(input, result));
+        }
+    });
+}
+
+/// Create zero level and add it to vector of hash levels
+fn create_hash_zero_level(
+    blocks: &Vec<Vec<u8>>,
+    hash_tree: &mut Vec<Vec<u8>>,
+    pool: &rayon::ThreadPool,
+    num_cpus: usize,
+) {
+    let size = blocks.len();
+    let num_block = size + size % 2;
+
+    let mut base: Vec<u8> = create_level(num_block * SIZE_BLOCK_HASH);
+
+    if pool.current_num_threads() > num_block {
+        let pool =
+            rayon::ThreadPool::new(rayon::Configuration::new().num_threads(num_block)).unwrap();
+
+        par_zero_hash(&blocks, &mut base, &pool);
+    } else {
+        par_zero_hash(&blocks, &mut base, &pool);
+    }
 
     if size % 2 == 1 {
         copy_last_data(&mut base, num_block);
@@ -339,7 +320,7 @@ fn create_base_tree_par(blocks: &Vec<Vec<u8>>, hash_tree: &mut Vec<Vec<u8>>, num
     hash_tree.push(base);
 }
 
-/// Create random data
+/// Create random data - set of byte blocks
 pub fn gen_data(capacity: usize) -> Vec<Vec<u8>> {
     let mut data: Vec<Vec<u8>> = Vec::with_capacity(capacity);
 
