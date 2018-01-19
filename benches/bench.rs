@@ -13,7 +13,7 @@ use merkle_tree::gen_data;
 #[bench]
 fn bench_one_core(b: &mut Bencher) {
     b.iter(|| {   
-    	let data = gen_data(512);           
+    	let data = gen_data(32*65536);           
         MerkleTree::new(&data, 1)     
     });
 }
@@ -21,7 +21,7 @@ fn bench_one_core(b: &mut Bencher) {
 #[bench]
 fn bench_few_core(b: &mut Bencher) {
     b.iter(|| {         
-    	let data = gen_data(512);   
+    	let data = gen_data(32*65536);   
         MerkleTree::new(&data, num_cpus::get())     
     });
 }
