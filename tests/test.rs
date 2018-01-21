@@ -69,7 +69,7 @@ mod merkle_test {
     #[test]
     #[should_panic]
     fn create_with_one_wrong_length_data_block_1() {
-        let mut data = gen_data(2);
+        let mut data = gen_data(2, 32);
         data[0].clear();
         let tree = MerkleTree::new(&data, num_cpus::get());
     }
@@ -77,7 +77,7 @@ mod merkle_test {
     #[test]
     #[should_panic]
     fn create_with_one_wrong_length_data_block_2() {
-        let mut data = gen_data(2);
+        let mut data = gen_data(2, 32);
         data[0].remove(0);
         let tree = MerkleTree::new(&data, num_cpus::get());
     }
@@ -85,7 +85,7 @@ mod merkle_test {
     #[test]
     #[should_panic]
     fn get_wrong_level() {
-        let data = gen_data(1);
+        let data = gen_data(1, 32);
         let tree = MerkleTree::new(&data, num_cpus::get());
         tree.get_level(2);
     }
@@ -93,7 +93,7 @@ mod merkle_test {
     #[test]
     #[should_panic]
     fn get_hash_with_wrong_level() {
-        let data = gen_data(1);
+        let data = gen_data(1, 32);
         let tree = MerkleTree::new(&data, num_cpus::get());
         tree.get_hash(2, 0);
     }
@@ -101,7 +101,7 @@ mod merkle_test {
     #[test]
     #[should_panic]
     fn get_hash_with_wrong_index() {
-        let data = gen_data(1);
+        let data = gen_data(1, 32);
         let tree = MerkleTree::new(&data, num_cpus::get());
         tree.get_hash(0, 2);
     }
@@ -109,7 +109,7 @@ mod merkle_test {
     #[test]
     #[should_panic]
     fn get_parent_with_wrong_level() {
-        let data = gen_data(1);
+        let data = gen_data(1,32);
         let tree = MerkleTree::new(&data, num_cpus::get());
         tree.get_parent(1, 0);
     }
@@ -117,14 +117,14 @@ mod merkle_test {
     #[test]
     #[should_panic]
     fn get_parent_with_wrong_index() {
-        let data = gen_data(1);
+        let data = gen_data(1, 32);
         let tree = MerkleTree::new(&data, num_cpus::get());
         tree.get_parent(0, 2);
     }
 
     #[test]
     fn get_parent() {
-        let data = gen_data(5);
+        let data = gen_data(5, 32);
         let tree = MerkleTree::new(&data, num_cpus::get());
 
         assert_eq!(tree.get_parent(2, 0), tree.get_root());
@@ -144,7 +144,7 @@ mod merkle_test {
     #[test]
     #[should_panic]
     fn get_child_with_wrong_level_greater() {
-        let data = gen_data(1);
+        let data = gen_data(1, 32);
         let tree = MerkleTree::new(&data, num_cpus::get());
         tree.get_children(2, 0);
     }
@@ -152,7 +152,7 @@ mod merkle_test {
     #[test]
     #[should_panic]
     fn get_child_with_wrong_level_less() {
-        let data = gen_data(1);
+        let data = gen_data(1, 32);
         let tree = MerkleTree::new(&data, num_cpus::get());
         tree.get_children(0, 0);
     }
@@ -160,14 +160,14 @@ mod merkle_test {
     #[test]
     #[should_panic]
     fn get_child_with_wrong_index() {
-        let data = gen_data(1);
+        let data = gen_data(1, 32);
         let tree = MerkleTree::new(&data, num_cpus::get());
         tree.get_children(1, 2);
     }
 
     #[test]
     fn get_child() {
-        let data = gen_data(5);
+        let data = gen_data(5, 32);
         let tree = MerkleTree::new(&data, num_cpus::get());
 
         assert_eq!(
@@ -198,6 +198,14 @@ mod merkle_test {
             tree.get_children(1, 3),
             (tree.get_hash(0, 4), tree.get_hash(0, 5))
         );
+    }
+
+    #[test]
+    fn equal_test_one_core_vs_few_cores() {
+        let data = gen_data(1024, 8192);
+        let tree_1 = MerkleTree::new(&data, num_cpus::get());
+        let tree_2 = MerkleTree::new(&data, 1);
+        assert_eq!(tree_1.get_root(), tree_2.get_root());
     }
 
 }

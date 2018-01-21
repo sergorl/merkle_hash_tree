@@ -12,12 +12,16 @@
 //! Tree level is a vector of contiguous batch of hash bytes which size is SIZE_BLOCK_HASH
 //! Thus, each level contains (number of blocks * SIZE_BLOCK_HASH) hash bytes
 //!
-//!
 //! # Example
 //! ```rust,ignore
 //!
-//! let data: Vec<Vec<u8>> = gen_data(8);
-//! let mtree = MerkleTree::new(&data, num_cpus::get());
+//! extern crate merkle_tree;
+//! use merkle_tree::MerkleTree;
+//! use merkle_tree::to_hex_string;
+//!
+//! let data: Vec<Vec<u8>> = vec![vec![0u8; 32], vec![0u8; 32]];
+//! let mtree = MerkleTree::new(&data, 1); // second parameter is number of cpu cores
+//! let root: String = to_hex_string(mtree.get_root());
 //! ```
 //!
 
@@ -169,7 +173,8 @@ impl fmt::Display for MerkleTree {
             );
         }
 
-        write!(f, "{}", "End.")
+        Ok(())
+        // write!(f, "{}", "End.")
     }
 }
 
@@ -320,18 +325,18 @@ fn create_hash_zero_level(
     hash_tree.push(base);
 }
 
-/// Create random data - set of byte blocks
-pub fn gen_data(capacity: usize) -> Vec<Vec<u8>> {
-    let mut data: Vec<Vec<u8>> = Vec::with_capacity(capacity);
+/// Create random data - set of byte blocks with fixed size
+pub fn gen_data(num_block: usize, size_block: usize) -> Vec<Vec<u8>> {
+    let mut data: Vec<Vec<u8>> = Vec::with_capacity(num_block);
 
     let mut rng = rand::thread_rng();
 
-    for _ in 0..capacity {
-        let mut nums = [0u8; 32];
-        for num in nums.iter_mut() {
-            *num = rng.gen_range::<u8>(0, 255);
-        }
-        data.push(nums.to_vec());
+    for _ in 0..num_block {
+        let mut block: Vec<u8> = Vec::with_capacity(size_block);
+        for _ in 0..size_block {
+            block.push(rng.gen_range::<u8>(0, 255));
+        }        
+        data.push(block);
     }
 
     data
