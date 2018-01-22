@@ -19,7 +19,7 @@
 //! use merkle_tree::MerkleTree;
 //! use merkle_tree::to_hex_string;
 //!
-//! let data: Vec<Vec<u8>> = vec![vec![0u8; 32], vec![0u8; 32]];
+//! let data: Vec<Vec<u8>> = vec![vec![0u8; 32], vec![0u8; 32]]; // or let data = gen_data(2, 32);
 //! let mtree = MerkleTree::new(&data, 1); // second parameter is number of cpu cores
 //! let root: String = to_hex_string(mtree.get_root());
 //! ```
@@ -34,7 +34,6 @@ use crypto::sha2::Sha256;
 use std::vec::Vec;
 use rand::Rng;
 use std::fmt;
-// use rayon::prelude::*;
 
 const SIZE_INPUT_HASH: usize = 64;
 const SIZE_BLOCK_HASH: usize = 32;
@@ -50,7 +49,8 @@ impl MerkleTree {
         if num_block == 0 {
             panic!("Length of blocks should be greater ZERO!");
         } else {
-            if blocks.iter().any(|block| block.len() < SIZE_BLOCK_HASH) {
+        	use rayon::prelude::*;
+            if blocks.par_iter().any(|block| block.len() < SIZE_BLOCK_HASH) {
                 panic!(
                     "Length of one or many blocks is less than min size of hash input {} bytes!",
                     SIZE_BLOCK_HASH
@@ -58,7 +58,7 @@ impl MerkleTree {
             }
         }
 
-        // Pool of thread for speed up calculations of hash in the current level of tree
+        // Pool of thread to speed up calculations of hash function fro the current tree level
         let pool =
             rayon::ThreadPool::new(rayon::Configuration::new().num_threads(num_cpus)).unwrap();
 
@@ -71,6 +71,7 @@ impl MerkleTree {
         create_hash_zero_level(blocks, &mut hash_tree, &pool, num_cpus);
 
         for _ in 0..levels {
+        	// Then crete other levels
             create_hash_level(&mut hash_tree, &pool, num_cpus);
         }
 
@@ -174,7 +175,6 @@ impl fmt::Display for MerkleTree {
         }
 
         Ok(())
-        // write!(f, "{}", "End.")
     }
 }
 
@@ -215,7 +215,7 @@ fn hash(data: &[u8], hashed: &mut [u8]) {
     sha.result(hashed);
 }
 
-/// Allocate vector with necessary capacity. It creates blueprint of new hash level
+/// Allocate vector with necessary capacity. It creates blueprint of new tree level
 fn create_level(size: usize) -> Vec<u8> {
     let mut new_level: Vec<u8> = Vec::with_capacity(size);
 
@@ -226,8 +226,8 @@ fn create_level(size: usize) -> Vec<u8> {
     new_level
 }
 
-/// Copy data from source to destination by pointers (of previous level of hash tree)
-/// It is used if previous level conatains odd number of byte block
+/// Copy data from source to destination by pointers (of previous tree level)
+/// It is used if previous level contains an odd number of byte block
 fn copy_last_data(data: &mut Vec<u8>, num_block: usize) {
     let src = data.as_ptr();
     let dst = data.as_mut_ptr();
@@ -239,7 +239,7 @@ fn copy_last_data(data: &mut Vec<u8>, num_block: usize) {
     }
 }
 
-/// Parallel hash
+/// Parallel hash for tree levels (exception is zero level, it has own function)
 fn par_hash_hash(prev_level: &Vec<u8>, new_level: &mut Vec<u8>, pool: &rayon::ThreadPool) {
     pool.scope(|scope| {
         for (input, result) in prev_level
@@ -251,7 +251,7 @@ fn par_hash_hash(prev_level: &Vec<u8>, new_level: &mut Vec<u8>, pool: &rayon::Th
     });
 }
 
-/// Create new level and add it to vector of hash levels
+/// Create new level and add it to vector of tree hash levels
 fn create_hash_level(hash_tree: &mut Vec<Vec<u8>>, pool: &rayon::ThreadPool, num_cpus: usize) {
     let size_prev_level: usize = hash_tree.last().unwrap().len();
 
@@ -288,7 +288,7 @@ fn create_hash_level(hash_tree: &mut Vec<Vec<u8>>, pool: &rayon::ThreadPool, num
     hash_tree.push(new_level);
 }
 
-/// Parallel hash
+/// Parallel hash for zero level
 fn par_zero_hash(blocks: &Vec<Vec<u8>>, base: &mut Vec<u8>, pool: &rayon::ThreadPool) {
     pool.scope(|scope| {
         for (input, result) in blocks.iter().zip(base.chunks_mut(SIZE_INPUT_HASH)) {
@@ -297,7 +297,7 @@ fn par_zero_hash(blocks: &Vec<Vec<u8>>, base: &mut Vec<u8>, pool: &rayon::Thread
     });
 }
 
-/// Create zero level and add it to vector of hash levels
+/// Create zero level and add it to vector of tree hash levels
 fn create_hash_zero_level(
     blocks: &Vec<Vec<u8>>,
     hash_tree: &mut Vec<Vec<u8>>,
@@ -325,7 +325,7 @@ fn create_hash_zero_level(
     hash_tree.push(base);
 }
 
-/// Create random data - set of byte blocks with fixed size
+/// Create random data - vector of byte blocks with fixed size
 pub fn gen_data(num_block: usize, size_block: usize) -> Vec<Vec<u8>> {
     let mut data: Vec<Vec<u8>> = Vec::with_capacity(num_block);
 
