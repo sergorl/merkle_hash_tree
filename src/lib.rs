@@ -49,7 +49,7 @@ impl MerkleTree {
         if num_block == 0 {
             panic!("Length of blocks should be greater ZERO!");
         } else {
-        	use rayon::prelude::*;
+            use rayon::prelude::*;
             if blocks.par_iter().any(|block| block.len() < SIZE_BLOCK_HASH) {
                 panic!(
                     "Length of one or many blocks is less than min size of hash input {} bytes!",
@@ -71,7 +71,7 @@ impl MerkleTree {
         create_hash_zero_level(blocks, &mut hash_tree, &pool, num_cpus);
 
         for _ in 0..levels {
-        	// Then crete other levels
+            // Then crete other levels
             create_hash_level(&mut hash_tree, &pool, num_cpus);
         }
 
@@ -335,7 +335,7 @@ pub fn gen_data(num_block: usize, size_block: usize) -> Vec<Vec<u8>> {
         let mut block: Vec<u8> = Vec::with_capacity(size_block);
         for _ in 0..size_block {
             block.push(rng.gen_range::<u8>(0, 255));
-        }        
+        }
         data.push(block);
     }
 
