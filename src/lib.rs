@@ -58,7 +58,7 @@ impl MerkleTree {
             }
         }
 
-        // Pool of thread to speed up calculations of hash function fro the current tree level
+        // Pool of thread to speed up calculations of hash function for the current tree level
         let pool =
             rayon::ThreadPool::new(rayon::Configuration::new().num_threads(num_cpus)).unwrap();
 
@@ -71,7 +71,7 @@ impl MerkleTree {
         create_hash_zero_level(blocks, &mut hash_tree, &pool, num_cpus);
 
         for _ in 0..levels {
-            // Then crete other levels
+            // Then create other levels
             create_hash_level(&mut hash_tree, &pool, num_cpus);
         }
 
