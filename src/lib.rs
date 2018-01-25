@@ -244,7 +244,7 @@ fn par_hash_hash(prev_level: &Vec<u8>, new_level: &mut Vec<u8>, pool: &rayon::Th
     pool.scope(|scope| {
         for (input, result) in prev_level
             .chunks(SIZE_INPUT_HASH)
-            .zip(new_level.chunks_mut(SIZE_INPUT_HASH))
+            .zip(new_level.chunks_mut(SIZE_BLOCK_HASH))
         {
             scope.spawn(move |_| hash_hash(input, result));
         }
@@ -291,7 +291,7 @@ fn create_hash_level(hash_tree: &mut Vec<Vec<u8>>, pool: &rayon::ThreadPool, num
 /// Parallel hash for zero level
 fn par_zero_hash(blocks: &Vec<Vec<u8>>, base: &mut Vec<u8>, pool: &rayon::ThreadPool) {
     pool.scope(|scope| {
-        for (input, result) in blocks.iter().zip(base.chunks_mut(SIZE_INPUT_HASH)) {
+        for (input, result) in blocks.iter().zip(base.chunks_mut(SIZE_BLOCK_HASH)) {
             scope.spawn(move |_| hash(input, result));
         }
     });
