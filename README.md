@@ -1,6 +1,6 @@
 # merkle_hash_tree
 Rust implementation of [merkle hash tree](https://en.wikipedia.org/wiki/Merkle_tree)
-![scheme of Merkle hash tree](https://github.com/sergorl/merkle_hash_tree/blob/master/merkle_tree_description.png)
+![scheme of Merkle hash tree](https://github.com/sergorl/merkle_hash_tree/blob/real_fast/merkle_tree_description.png)
 
 
 ### Dependencies
